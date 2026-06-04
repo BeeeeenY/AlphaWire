@@ -59,65 +59,25 @@ class MarketNewsClient:
         prompt = (
             f"{MARKET_BRIEF_PROMPT}\n\n"
             f"Date context: {today}. Timing context: 11:00 AM Singapore time. "
-            "Use at most 4 web searches across reliable market sources, then stop "
-            "searching and write the final brief. Return text and icon for each "
-            "section suitable for Telegram, under 650 words. Clearly distinguish "
-            "facts from market interpretation. Do not start with a general title, "
-            "start with the news directly. Be concise and informative. Telegram "
-            "message format is not markdown, do not use * for formatting."
+            "Return text and icon for each section suitable for Telegram, under 650 words. Clearly distinguish facts from market interpretation. Do not start with a general title, start with the news directly. Be concise and informative. Telegram message format is not markdown, do not use * for formating. "
         
         )
 
         try:
             response = self.client.responses.create(
                 model=self.model,
-                reasoning={"effort": "medium"},
+                reasoning={"effort": "low"},
                 tools=[{"type": "web_search"}],
                 input=prompt,
-                max_output_tokens=6000,
-                max_tool_calls=4,
+                max_output_tokens=3500,
+                max_tool_calls=8,
             )
         except Exception as exc:
             raise RuntimeError(f"OpenAI briefing generation failed: {exc}") from exc
 
         briefing = extract_response_text(response)
         if not briefing:
-            LOGGER.warning(
-                "OpenAI returned no briefing text on first pass: %s",
-                describe_response_state(response),
-            )
-            briefing = self._generate_backup_live_briefing()
-
-        if not briefing:
-            raise RuntimeError(
-                f"OpenAI returned an empty briefing; {describe_response_state(response)}"
-            )
-
-        return briefing
-
-    def _generate_backup_live_briefing(self) -> str:
-        try:
-            response = self.client.responses.create(
-                model=self.model,
-                reasoning={"effort": "medium"},
-                input=(
-                    "Write a concise AlphaWire morning market brief from your general "
-                    "market knowledge without using tools. Mention that source links are "
-                    "unavailable in fallback mode. Cover global/U.S. markets, indexes, "
-                    "rates, FX, commodities, tech/AI themes, and a short watchlist. "
-                    "Keep it under 450 words and suitable for Telegram."
-                ),
-                max_output_tokens=5000,
-            )
-        except Exception as exc:
-            raise RuntimeError(f"OpenAI backup briefing generation failed: {exc}") from exc
-
-        briefing = extract_response_text(response)
-        if not briefing:
-            LOGGER.warning(
-                "OpenAI returned no briefing text on backup pass: %s",
-                describe_response_state(response),
-            )
+            raise RuntimeError("OpenAI returned an empty briefing")
 
         return briefing
 
@@ -166,11 +126,11 @@ class BriefingReviewClient:
         try:
             response = self.client.responses.create(
                 model=self.model,
-                reasoning={"effort": "medium"},
+                reasoning={"effort": "low"},
                 tools=[{"type": "web_search"}],
                 input=prompt,
-                max_output_tokens=2000,
-                max_tool_calls=4,
+                max_output_tokens=1200,
+                max_tool_calls=6,
             )
         except Exception as exc:
             raise RuntimeError(f"OpenAI briefing review failed: {exc}") from exc
@@ -204,24 +164,6 @@ def extract_response_text(response: object) -> str:
                 parts.append(text)
 
     return "\n".join(parts).strip()
-
-
-def describe_response_state(response: object) -> str:
-    """Return non-sensitive response diagnostics for logs."""
-    response_id = getattr(response, "id", None)
-    status = getattr(response, "status", None)
-    incomplete_details = getattr(response, "incomplete_details", None)
-    output_types = []
-
-    output = getattr(response, "output", None) or []
-    for item in output:
-        output_types.append(getattr(item, "type", type(item).__name__))
-
-    return (
-        f"id={response_id or 'unknown'}, status={status or 'unknown'}, "
-        f"incomplete_details={incomplete_details or 'none'}, "
-        f"output_types={output_types or 'none'}"
-    )
 
 
 def _extract_text_from_mapping(data: object) -> str:
