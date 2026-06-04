@@ -2,7 +2,7 @@ name: Daily AlphaWire Review
 
 on:
   schedule:
-    - cron: "10 3 * * *" # 11:10 AM Singapore time
+    - cron: "5 3 * * *" # 11:05 AM Singapore time
   workflow_dispatch:
 
 env:
