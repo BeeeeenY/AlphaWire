@@ -22,6 +22,10 @@ from src.telegram_client import TelegramClient, TelegramError
 
 LOGGER = logging.getLogger("alphawire.news_bot")
 STATE_FILE = PROJECT_ROOT / "data" / "latest_news_post.json"
+NEWS_FAILURE_ALERT = (
+    "未能出刊。Codex今天翻市场小报时发现OpenAI钱袋空空，"
+    "AlphaWire早报暂时交不出来啦。请补充弹药后再召唤我"
+)
 
 
 def env_flag(name: str, default: bool = False) -> bool:
@@ -103,7 +107,12 @@ def main() -> int:
             chat_id=settings["TELEGRAM_CHAT_ID"],
         )
 
-        briefing = market_news.generate_daily_briefing()
+        try:
+            briefing = market_news.generate_daily_briefing()
+        except RuntimeError as exc:
+            telegram.send_message(NEWS_FAILURE_ALERT)
+            raise RuntimeError(f"{exc}; sent Telegram failure alert") from exc
+
         message = format_message(briefing)
         telegram_results = telegram.send_message(message)
         save_post_receipt(briefing, message, telegram_results)

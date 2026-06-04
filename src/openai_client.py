@@ -69,7 +69,7 @@ class MarketNewsClient:
                 reasoning={"effort": "medium"},
                 tools=[{"type": "web_search"}],
                 input=prompt,
-                max_output_tokens=3500,
+                max_output_tokens=6000,
                 max_tool_calls=8,
             )
         except Exception as exc:
@@ -77,9 +77,48 @@ class MarketNewsClient:
 
         briefing = extract_response_text(response)
         if not briefing:
-            raise RuntimeError("OpenAI returned an empty briefing")
+            LOGGER.warning(
+                "OpenAI returned no briefing text on first pass: %s",
+                describe_response_state(response),
+            )
+            briefing = self._finalize_empty_briefing_response(response)
+
+        if not briefing:
+            raise RuntimeError(
+                f"OpenAI returned an empty briefing; {describe_response_state(response)}"
+            )
 
         return briefing
+
+    def _finalize_empty_briefing_response(self, response: object) -> str:
+        previous_response_id = getattr(response, "id", None)
+        if not previous_response_id:
+            return ""
+
+        try:
+            final_response = self.client.responses.create(
+                model=self.model,
+                previous_response_id=previous_response_id,
+                reasoning={"effort": "medium"},
+                input=(
+                    "Use the web-search findings already gathered in the previous response "
+                    "to write the final Telegram-ready AlphaWire market brief now. Do not "
+                    "perform more searching. Keep it under 650 words, include source links "
+                    "where available, and start directly with the news."
+                ),
+                max_output_tokens=3000,
+            )
+        except Exception as exc:
+            raise RuntimeError(f"OpenAI briefing finalization failed: {exc}") from exc
+
+        final_text = extract_response_text(final_response)
+        if not final_text:
+            LOGGER.warning(
+                "OpenAI returned no briefing text on finalization pass: %s",
+                describe_response_state(final_response),
+            )
+
+        return final_text
 
     def _generate_sample_briefing(self) -> str:
         bullets = "\n".join(f"- {headline}" for headline in SAMPLE_HEADLINES)
@@ -129,7 +168,7 @@ class BriefingReviewClient:
                 reasoning={"effort": "medium"},
                 tools=[{"type": "web_search"}],
                 input=prompt,
-                max_output_tokens=1200,
+                max_output_tokens=2000,
                 max_tool_calls=6,
             )
         except Exception as exc:
@@ -164,6 +203,24 @@ def extract_response_text(response: object) -> str:
                 parts.append(text)
 
     return "\n".join(parts).strip()
+
+
+def describe_response_state(response: object) -> str:
+    """Return non-sensitive response diagnostics for logs."""
+    response_id = getattr(response, "id", None)
+    status = getattr(response, "status", None)
+    incomplete_details = getattr(response, "incomplete_details", None)
+    output_types = []
+
+    output = getattr(response, "output", None) or []
+    for item in output:
+        output_types.append(getattr(item, "type", type(item).__name__))
+
+    return (
+        f"id={response_id or 'unknown'}, status={status or 'unknown'}, "
+        f"incomplete_details={incomplete_details or 'none'}, "
+        f"output_types={output_types or 'none'}"
+    )
 
 
 def _extract_text_from_mapping(data: object) -> str:

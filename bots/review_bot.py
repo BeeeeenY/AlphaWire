@@ -23,6 +23,7 @@ from src.telegram_client import TelegramClient, TelegramError
 
 LOGGER = logging.getLogger("alphawire.review_bot")
 DEFAULT_STATE_FILE = PROJECT_ROOT / "data" / "latest_news_post.json"
+REVIEW_OPENAI_FAILURE_ALERT = "已找到简报，但本警长今天查不了网，你的token被我吃完啦，Yeehaw~"
 
 
 def env_flag(name: str, default: bool = False) -> bool:
@@ -163,7 +164,15 @@ def main() -> int:
             return 1
 
         briefing = receipt.get("briefing") or receipt["telegram_message"]
-        review = reviewer.review_briefing(briefing)
+        try:
+            review = reviewer.review_briefing(briefing)
+        except RuntimeError as exc:
+            telegram.send_message(
+                REVIEW_OPENAI_FAILURE_ALERT,
+                reply_to_message_id=receipt.get("message_id"),
+            )
+            raise RuntimeError(f"{exc}; sent Telegram failure alert") from exc
+
         telegram.send_message(review, reply_to_message_id=receipt.get("message_id"))
     except (RuntimeError, TelegramError, ValueError) as exc:
         LOGGER.error("Review bot failed: %s", exc)
