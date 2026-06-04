@@ -59,7 +59,12 @@ class MarketNewsClient:
         prompt = (
             f"{MARKET_BRIEF_PROMPT}\n\n"
             f"Date context: {today}. Timing context: 11:00 AM Singapore time. "
-            "Return text and icon for each section suitable for Telegram, under 650 words. Clearly distinguish facts from market interpretation. Do not start with a general title, start with the news directly. Be concise and informative. Telegram message format is not markdown, do not use * for formating. "
+            "Use at most 4 web searches across reliable market sources, then stop "
+            "searching and write the final brief. Return text and icon for each "
+            "section suitable for Telegram, under 650 words. Clearly distinguish "
+            "facts from market interpretation. Do not start with a general title, "
+            "start with the news directly. Be concise and informative. Telegram "
+            "message format is not markdown, do not use * for formatting."
         
         )
 
@@ -70,7 +75,7 @@ class MarketNewsClient:
                 tools=[{"type": "web_search"}],
                 input=prompt,
                 max_output_tokens=6000,
-                max_tool_calls=8,
+                max_tool_calls=4,
             )
         except Exception as exc:
             raise RuntimeError(f"OpenAI briefing generation failed: {exc}") from exc
@@ -81,7 +86,7 @@ class MarketNewsClient:
                 "OpenAI returned no briefing text on first pass: %s",
                 describe_response_state(response),
             )
-            briefing = self._finalize_empty_briefing_response(response)
+            briefing = self._generate_backup_live_briefing()
 
         if not briefing:
             raise RuntimeError(
@@ -90,35 +95,31 @@ class MarketNewsClient:
 
         return briefing
 
-    def _finalize_empty_briefing_response(self, response: object) -> str:
-        previous_response_id = getattr(response, "id", None)
-        if not previous_response_id:
-            return ""
-
+    def _generate_backup_live_briefing(self) -> str:
         try:
-            final_response = self.client.responses.create(
+            response = self.client.responses.create(
                 model=self.model,
-                previous_response_id=previous_response_id,
                 reasoning={"effort": "medium"},
                 input=(
-                    "Use the web-search findings already gathered in the previous response "
-                    "to write the final Telegram-ready AlphaWire market brief now. Do not "
-                    "perform more searching. Keep it under 650 words, include source links "
-                    "where available, and start directly with the news."
+                    "Write a concise AlphaWire morning market brief from your general "
+                    "market knowledge without using tools. Mention that source links are "
+                    "unavailable in fallback mode. Cover global/U.S. markets, indexes, "
+                    "rates, FX, commodities, tech/AI themes, and a short watchlist. "
+                    "Keep it under 450 words and suitable for Telegram."
                 ),
-                max_output_tokens=3000,
+                max_output_tokens=5000,
             )
         except Exception as exc:
-            raise RuntimeError(f"OpenAI briefing finalization failed: {exc}") from exc
+            raise RuntimeError(f"OpenAI backup briefing generation failed: {exc}") from exc
 
-        final_text = extract_response_text(final_response)
-        if not final_text:
+        briefing = extract_response_text(response)
+        if not briefing:
             LOGGER.warning(
-                "OpenAI returned no briefing text on finalization pass: %s",
-                describe_response_state(final_response),
+                "OpenAI returned no briefing text on backup pass: %s",
+                describe_response_state(response),
             )
 
-        return final_text
+        return briefing
 
     def _generate_sample_briefing(self) -> str:
         bullets = "\n".join(f"- {headline}" for headline in SAMPLE_HEADLINES)
@@ -169,7 +170,7 @@ class BriefingReviewClient:
                 tools=[{"type": "web_search"}],
                 input=prompt,
                 max_output_tokens=2000,
-                max_tool_calls=6,
+                max_tool_calls=4,
             )
         except Exception as exc:
             raise RuntimeError(f"OpenAI briefing review failed: {exc}") from exc
