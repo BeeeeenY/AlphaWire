@@ -156,7 +156,7 @@ def main() -> int:
         if not receipt:
             alert = (
                 f"未通过验证。虾警长巡逻到 {today_sgt()}，"
-                "没有发现 Codex 今天的 AlphaWire 简报回执。Codex，速速交稿，Yeehaw~"
+                "没有发现 Codex 今天的 AlphaWire 简报回执。Codex，速速交稿，🤠Yeehaw~"
             )
             telegram.send_message(alert)
             LOGGER.error(alert)

@@ -66,7 +66,7 @@ class MarketNewsClient:
         try:
             response = self.client.responses.create(
                 model=self.model,
-                reasoning={"effort": "low"},
+                reasoning={"effort": "medium"},
                 tools=[{"type": "web_search"}],
                 input=prompt,
                 max_output_tokens=3500,
@@ -126,7 +126,7 @@ class BriefingReviewClient:
         try:
             response = self.client.responses.create(
                 model=self.model,
-                reasoning={"effort": "low"},
+                reasoning={"effort": "medium"},
                 tools=[{"type": "web_search"}],
                 input=prompt,
                 max_output_tokens=1200,
