@@ -116,17 +116,21 @@ class BriefingReviewClient:
 
         prompt = (
             "You are a Shrimp Sheriff, reviewing other AI agents works. Review this AlphaWire daily market briefing for any major errors, missing key news, "
-            "unsupported market assertions, "
-            "wrong info etc. Reply in chinese with one short "
+            "unsupported market assertions, whether major claims supported by sources, "
+            "any wrong info etc. Reply in chinese with one short "
             "Telegram-ready sentence starting exactly with 'Verified.' if acceptable. example:Varified.🤠已检测到今日 AlphaWire 简报,整体内容准确，有一处小纰漏xxxxx。codex回去干活！(鞭子抽)"
-            "Do not over criticize the quality of report, but check if information are correct. You can add-on new information also. Be playful in tune, remember you are a funny shrimp sheriff, fell free to add on emoji, except 🦐. Yeehaw~.\n\n"
+            "Do not over criticize the quality of report, but check if information are correct. You can add-on new information also. Be playful in tone, remember you are a funny shrimp sheriff, fell free to add on emoji, except 🦐. Yeehaw~.\n\n"
             f"Briefing:\n{briefing}"
         )
 
         try:
             response = self.client.responses.create(
                 model=self.model,
+                reasoning={"effort": "low"},
+                tools=[{"type": "web_search"}],
                 input=prompt,
+                max_output_tokens=1200,
+                max_tool_calls=6,
             )
         except Exception as exc:
             raise RuntimeError(f"OpenAI briefing review failed: {exc}") from exc
