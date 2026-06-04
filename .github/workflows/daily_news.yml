@@ -1,0 +1,37 @@
+name: Daily AlphaWire News
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 11:00 AM Singapore time
+  workflow_dispatch:
+
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send daily briefing
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          ALPHAWIRE_USE_LIVE_OPENAI: ${{ vars.ALPHAWIRE_USE_LIVE_OPENAI || 'false' }}
+        run: python bots/news_bot.py
+
+      - name: Upload news receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-news-post
+          path: data/latest_news_post.json
+          if-no-files-found: error
