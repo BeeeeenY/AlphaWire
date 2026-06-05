@@ -1,13 +1,15 @@
-name: Daily AlphaWire News
+name: Daily AlphaWire
 
 on:
+  schedule:
+    - cron: "*/5 * * * *" # Diagnostic: every 5 minutes
   workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  news:
+  alpha-wire:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -30,9 +32,15 @@ jobs:
           ALPHAWIRE_USE_LIVE_OPENAI: ${{ vars.ALPHAWIRE_USE_LIVE_OPENAI || 'false' }}
         run: python bots/news_bot.py
 
-      - name: Upload news receipt
-        uses: actions/upload-artifact@v4
-        with:
-          name: latest-news-post
-          path: data/latest_news_post.json
-          if-no-files-found: error
+      - name: Wait before review
+        run: sleep 300
+
+      - name: Review daily briefing
+        env:
+          REVIEW_TELEGRAM_BOT_TOKEN: ${{ secrets.REVIEW_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          ALPHAWIRE_USE_LIVE_OPENAI: ${{ vars.ALPHAWIRE_USE_LIVE_OPENAI || 'false' }}
+          NEWS_BOT_USERNAME: ${{ secrets.NEWS_BOT_USERNAME }}
+        run: python bots/review_bot.py

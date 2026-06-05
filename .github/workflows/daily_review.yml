@@ -1,8 +1,6 @@
 name: Daily AlphaWire Review
 
 on:
-  schedule:
-    - cron: "25 5 * * *" # 1:25 PM Singapore time
   workflow_dispatch:
 
 env:
@@ -26,18 +24,6 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-
-      - name: Download latest news receipt
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p data
-          run_id="$(gh run list --workflow daily_news.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
-          if [ -z "$run_id" ]; then
-            echo "No successful daily_news.yml run found."
-            exit 1
-          fi
-          gh run download "$run_id" --name latest-news-post --dir data
 
       - name: Review daily briefing
         env:

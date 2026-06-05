@@ -1,6 +1,6 @@
 # AlphaWire
 
-AlphaWire is a Telegram-native market briefing system powered by OpenAI. Every morning, Codex writes a concise market brief. Five minutes later, Shrimp Sheriff rides in to verify the receipt, review the report, and call out anything suspicious.
+AlphaWire is a Telegram-native market briefing system powered by OpenAI. Codex writes a concise market brief; Shrimp Sheriff rides in afterward to verify the receipt, review the report, and call out anything suspicious.
 
 Fear the tiny crustacean. 🤠🦞
 
@@ -10,10 +10,10 @@ Fear the tiny crustacean. 🤠🦞
 
 ## What It Does
 
-- Posts a daily market briefing to a Telegram group at 11:00 AM Singapore time.
+- Posts a daily market briefing to a Telegram group.
 - Uses OpenAI web search in live mode to gather current market news.
-- Saves a dated receipt after the news bot posts, so the review bot can verify that today’s brief exists.
-- Runs Shrimp Sheriff at 11:05 AM Singapore time to review Codex’s work.
+- Saves a dated receipt after the news bot posts, so the review bot can verify the brief.
+- Runs Shrimp Sheriff after Codex to review the report.
 - Keeps local testing cheap with sample-mode defaults. Live OpenAI calls only happen when explicitly enabled.
 
 ## Project Structure
@@ -28,9 +28,12 @@ AlphaWire/
 │   └── telegram_client.py   # Telegram Bot API wrapper
 ├── .github/
 │   └── workflows/
-│       ├── daily_news.yml   # 11:00 AM SGT scheduled briefing
-│       └── daily_review.yml # 11:05 AM SGT scheduled review
-├── .env.example             # Template config, safe to commit
+│       ├── daily_alpha_wire.yml # Orchestrated news + review workflow
+│       ├── daily_news.yml       # Manual news-only helper
+│       └── daily_review.yml     # Manual review-only helper
+├── assets/
+│   └── shrimp-sheriff.png
+├── .env.example
 ├── .gitignore
 ├── requirements.txt
 ├── README.md
@@ -93,21 +96,14 @@ ALPHAWIRE_USE_LIVE_OPENAI=false
 NEWS_BOT_USERNAME=benYnews_bot
 ```
 
-Run the news bot:
+Run sample mode:
 
 ```bash
 python bots/news_bot.py
-```
-
-Run the review bot:
-
-```bash
 python bots/review_bot.py
 ```
 
-By default, `ALPHAWIRE_USE_LIVE_OPENAI=false`, so the bots use sample content. This lets you test Telegram delivery without spending OpenAI tokens.
-
-To run live:
+Run live mode:
 
 ```bash
 ALPHAWIRE_USE_LIVE_OPENAI=true python bots/news_bot.py
@@ -128,14 +124,18 @@ Required environment variables:
 
 ## GitHub Actions
 
-AlphaWire runs from GitHub Actions on the default branch.
+AlphaWire now uses one orchestrated scheduled workflow:
 
-| Workflow | Schedule | Singapore Time | Purpose |
-| --- | ---: | ---: | --- |
-| `daily_news.yml` | `*/5 * * * *` UTC | Every 5 minutes, diagnostic mode | Generate and send the market brief |
-| `daily_review.yml` | `25 5 * * *` UTC | 1:25 PM | Verify and review the brief |
+| Workflow | Schedule | Purpose |
+| --- | ---: | --- |
+| `daily_alpha_wire.yml` | `*/5 * * * *` UTC, diagnostic mode | Run news, wait five minutes, then run review |
 
-Both workflows also support manual runs with `workflow_dispatch`.
+The old helper workflows are manual-only:
+
+- `daily_news.yml`
+- `daily_review.yml`
+
+This avoids depending on two separate GitHub scheduler events and keeps the news receipt in the same workspace for review.
 
 Add these repository secrets:
 
@@ -163,8 +163,7 @@ Telegram bots cannot reliably read another bot’s past messages from group hist
 ```text
 news_bot.py posts the briefing
 news_bot.py saves data/latest_news_post.json
-GitHub Actions uploads the receipt
-review_bot.py downloads the receipt
+review_bot.py reads the receipt in the same workflow
 Shrimp Sheriff verifies and replies
 ```
 
