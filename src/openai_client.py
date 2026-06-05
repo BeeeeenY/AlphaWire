@@ -129,7 +129,7 @@ class BriefingReviewClient:
                 reasoning={"effort": "low"},
                 tools=[{"type": "web_search"}],
                 input=prompt,
-                max_output_tokens=1200,
+                max_output_tokens=3000,
                 max_tool_calls=6,
             )
         except Exception as exc:

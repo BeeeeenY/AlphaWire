@@ -171,7 +171,8 @@ def main() -> int:
                 REVIEW_OPENAI_FAILURE_ALERT,
                 reply_to_message_id=receipt.get("message_id"),
             )
-            raise RuntimeError(f"{exc}; sent Telegram failure alert") from exc
+            LOGGER.error("Review bot OpenAI check failed: %s; sent Telegram failure alert", exc)
+            return 0
 
         telegram.send_message(review, reply_to_message_id=receipt.get("message_id"))
     except (RuntimeError, TelegramError, ValueError) as exc:
