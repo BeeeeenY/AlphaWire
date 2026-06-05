@@ -2,7 +2,7 @@ name: Daily AlphaWire News
 
 on:
   schedule:
-    - cron: "0 3 * * *" # 11:00 AM Singapore time
+    - cron: "20 5 * * *" # 1:20 PM Singapore time
   workflow_dispatch:
 
 env:
