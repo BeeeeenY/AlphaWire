@@ -132,7 +132,7 @@ AlphaWire runs from GitHub Actions on the default branch.
 
 | Workflow | Schedule | Singapore Time | Purpose |
 | --- | ---: | ---: | --- |
-| `daily_news.yml` | `20 5 * * *` UTC | 1:20 PM | Generate and send the market brief |
+| `daily_news.yml` | `*/5 * * * *` UTC | Every 5 minutes, diagnostic mode | Generate and send the market brief |
 | `daily_review.yml` | `25 5 * * *` UTC | 1:25 PM | Verify and review the brief |
 
 Both workflows also support manual runs with `workflow_dispatch`.
