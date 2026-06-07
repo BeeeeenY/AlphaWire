@@ -128,7 +128,7 @@ AlphaWire now uses one orchestrated scheduled workflow:
 
 | Workflow | Schedule | Purpose |
 | --- | ---: | --- |
-| `daily_alpha_wire.yml` | `*/5 * * * *` UTC, diagnostic mode | Run news, wait five minutes, then run review |
+| `daily_alpha_wire.yml` | `0 22 * * *` UTC | Run news at 6:00 AM Singapore time, wait five minutes, then run review |
 
 The old helper workflows are manual-only:
 

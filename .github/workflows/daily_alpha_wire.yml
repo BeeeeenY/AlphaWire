@@ -2,7 +2,7 @@ name: Daily AlphaWire
 
 on:
   schedule:
-    - cron: "*/5 * * * *" # Diagnostic: every 5 minutes
+    - cron: "0 22 * * *" # 6:00 AM Singapore time
   workflow_dispatch:
 
 env:
